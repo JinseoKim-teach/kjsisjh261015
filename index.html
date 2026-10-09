@@ -24,7 +24,6 @@
       doc 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // 선생님 프로젝트 설정값 적용
     const firebaseConfig = {
       apiKey: "AIzaSyBMeRoGyq8L36-KwbsvkusBJjQ1MPkuQfs",
       authDomain: "kjsisjh260515.firebaseapp.com",
@@ -39,7 +38,6 @@
     const db = getFirestore(app);
     const wishesCol = collection(db, "wishes");
 
-    // 전역 객체로 등록
     window.db = db;
     window.wishesCol = wishesCol;
     window.addDoc = addDoc;
@@ -47,8 +45,6 @@
     window.doc = doc;
     window.getDocs = getDocs;
 
-    // 실시간 감지 (Firestore onSnapshot)
-    // 교사 화면이든 학생 화면이든 누군가 소원을 올리면 즉시 화면에 띄웁니다.
     const q = query(wishesCol, orderBy("createdAt", "asc"));
     const renderedIds = new Set();
 
@@ -125,7 +121,6 @@
 </head>
 <body class="relative">
 
-  <!-- 별빛 배경 -->
   <div id="stars-container" class="fixed inset-0 pointer-events-none z-0"></div>
 
   <!-- 상단 네비게이션 헤더 -->
@@ -134,12 +129,12 @@
       <span class="text-2xl">🏮</span>
       <div>
         <h1 class="font-batang text-xl font-bold tracking-wide text-amber-300">연등회(燃燈會) 소원 등 띄우기</h1>
-        <p class="text-xs text-gray-400">교사 화면과 학생 크롬북이 실시간으로 연결되어 있습니다</p>
+        <p class="text-xs text-gray-400" id="header-desc">교사용 밤하늘 화면</p>
       </div>
     </div>
 
-    <!-- 모드 탭 -->
-    <div class="flex items-center gap-2 mt-3 sm:mt-0">
+    <!-- 모드 탭 (학생 모드로 접속 시 자동으로 숨겨짐) -->
+    <div id="mode-tabs" class="flex items-center gap-2 mt-3 sm:mt-0">
       <button id="tab-teacher" onclick="switchMode('teacher')" class="px-4 py-2 rounded-xl text-sm font-semibold transition bg-amber-500 text-gray-950 shadow-lg shadow-amber-500/20 flex items-center gap-2">
         <i data-lucide="tv" class="w-4 h-4"></i> 교사용 하늘 화면
       </button>
@@ -149,12 +144,10 @@
     </div>
   </header>
 
-  <!-- 본문 컨텐츠 -->
   <main class="relative z-10">
 
     <!-- 1. 교사 화면: 밤하늘 -->
     <section id="view-teacher" class="relative w-full h-[calc(100vh-80px)] overflow-hidden">
-      <!-- 상단 컨트롤러 -->
       <div class="absolute top-4 left-4 z-30 flex items-center gap-3 bg-gray-900/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-gray-700/60 text-xs">
         <div class="flex items-center gap-2">
           <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -162,20 +155,18 @@
         </div>
         <div class="h-4 w-px bg-gray-700"></div>
         <button onclick="clearAllLanterns()" class="text-gray-400 hover:text-red-400 transition flex items-center gap-1">
-          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 연등 비우기
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 비우기
         </button>
         <button onclick="toggleFullscreen()" class="text-gray-400 hover:text-amber-300 transition flex items-center gap-1">
           <i data-lucide="maximize" class="w-3.5 h-3.5"></i> 전체화면
         </button>
       </div>
 
-      <!-- 학생 참여 안내 박스 -->
       <div class="absolute top-4 right-4 z-30 bg-gray-900/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-amber-500/30 text-xs text-right">
-        <p class="text-amber-300 font-semibold">📌 학생 크롬북 참여 방법</p>
-        <p class="text-gray-400 mt-0.5">상단 우측 <b class="text-gray-200">"학생 소원 적기"</b> 버튼 누르고 작성</p>
+        <p class="text-amber-300 font-semibold">📌 학생 참여 URL</p>
+        <p class="text-gray-300 font-mono text-[11px] mt-0.5 select-all">.../?role=student</p>
       </div>
 
-      <!-- 하늘 캔버스 -->
       <div id="sky-canvas" class="relative w-full h-full overflow-hidden">
         <div id="empty-notice" class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
           <div class="text-6xl mb-3 animate-bounce">🪔</div>
@@ -193,18 +184,16 @@
             연등회 소원 빌기 체험
           </span>
           <h2 class="font-batang text-2xl sm:text-3xl font-bold text-gray-100">나만의 소원등 만들기</h2>
-          <p class="text-xs sm:text-sm text-gray-400 mt-1">소원 분야와 원하는 연등 색깔을 고른 뒤 소원을 날려보세요.</p>
+          <p class="text-xs sm:text-sm text-gray-400 mt-1">소원 종류와 마음에 드는 색깔을 고른 뒤 연등을 날려보세요.</p>
         </div>
 
         <form id="wish-form" onsubmit="handleSendWish(event)" class="space-y-6">
-          <!-- 학생 이름 -->
           <div>
             <label class="block text-xs font-semibold text-gray-300 mb-2">이름 또는 별명</label>
             <input type="text" id="student-name" required placeholder="예: 5학년 1반 이서윤" maxlength="15"
               class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 text-sm" />
           </div>
 
-          <!-- 소원 카테고리 -->
           <div>
             <label class="block text-xs font-semibold text-gray-300 mb-2">소원의 종류</label>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -246,29 +235,36 @@
             </div>
           </div>
 
-          <!-- 연등 색상 선택 -->
           <div>
             <label class="block text-xs font-semibold text-gray-300 mb-2">원하는 연등 색상</label>
             <div class="grid grid-cols-4 sm:grid-cols-7 gap-2" id="color-palette"></div>
           </div>
 
-          <!-- 소원 본문 -->
           <div>
             <label class="block text-xs font-semibold text-gray-300 mb-2">이루고 싶은 소원</label>
-            <textarea id="wish-text" required rows="3" maxlength="120" placeholder="소원을 정성껏 적어보세요. (예: 우리 가족 아프지 않고 행복하게 해주세요!)"
+            <textarea id="wish-text" required rows="3" maxlength="120" placeholder="소원을 정성껏 적어보세요. (예: 우리 가족 건강하고 친구들과 사이좋게 지내게 해주세요!)"
               class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 text-sm resize-none"></textarea>
           </div>
 
-          <!-- 전송 버튼 -->
           <button type="submit" id="btn-submit" class="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-gray-950 font-bold text-base hover:brightness-110 active:scale-[0.98] transition shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2">
             <i data-lucide="send" class="w-5 h-5"></i> 소원 연등 밤하늘로 띄우기
           </button>
         </form>
+
+        <!-- 학생 제출 완료 안내 카드 (전송 후 표시) -->
+        <div id="submit-success" class="hidden text-center py-8">
+          <div class="text-5xl mb-3 animate-bounce">🏮✨</div>
+          <h3 class="font-batang text-2xl font-bold text-amber-300 mb-2">소원이 하늘로 날아올랐습니다!</h3>
+          <p class="text-sm text-gray-300 mb-6">선생님 화면의 밤하늘을 올려다보세요.</p>
+          <button onclick="resetStudentForm()" class="px-5 py-2.5 rounded-xl bg-gray-800 border border-gray-700 text-xs text-gray-300 hover:text-white transition">
+            소원 하나 더 적기
+          </button>
+        </div>
       </div>
     </section>
   </main>
 
-  <!-- 연등 상세 모달 -->
+  <!-- 상세 모달 -->
   <div id="modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-gray-900 border border-amber-500/40 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl relative">
       <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-100">
@@ -292,8 +288,9 @@
       { id: 'gold', name: '금빛', color: '#f77f00', glow: 'rgba(247, 127, 0, 0.7)' },
     ];
     let selectedColor = COLORS[0];
+    let isStudentModeOnly = false;
 
-    // 별빛 배경
+    // 배경 별빛
     const starsContainer = document.getElementById('stars-container');
     for (let i = 0; i < 70; i++) {
       const star = document.createElement('div');
@@ -326,27 +323,30 @@
       paletteContainer.appendChild(btn);
     });
 
-    // 탭 전환
+    // 화면 모드 제어
     function switchMode(mode) {
       const teacherView = document.getElementById('view-teacher');
       const studentView = document.getElementById('view-student');
       const tabTeacher = document.getElementById('tab-teacher');
       const tabStudent = document.getElementById('tab-student');
+      const desc = document.getElementById('header-desc');
 
       if (mode === 'teacher') {
         teacherView.classList.remove('hidden');
         studentView.classList.add('hidden');
-        tabTeacher.className = "px-4 py-2 rounded-xl text-sm font-semibold transition bg-amber-500 text-gray-950 shadow-lg shadow-amber-500/20 flex items-center gap-2";
-        tabStudent.className = "px-4 py-2 rounded-xl text-sm font-semibold transition bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2";
+        if (tabTeacher) tabTeacher.className = "px-4 py-2 rounded-xl text-sm font-semibold transition bg-amber-500 text-gray-950 shadow-lg shadow-amber-500/20 flex items-center gap-2";
+        if (tabStudent) tabStudent.className = "px-4 py-2 rounded-xl text-sm font-semibold transition bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2";
+        desc.innerText = "교사용 밤하늘 화면";
       } else {
         teacherView.classList.add('hidden');
         studentView.classList.remove('hidden');
-        tabStudent.className = "px-4 py-2 rounded-xl text-sm font-semibold transition bg-amber-500 text-gray-950 shadow-lg shadow-amber-500/20 flex items-center gap-2";
-        tabTeacher.className = "px-4 py-2 rounded-xl text-sm font-semibold transition bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2";
+        if (tabStudent) tabStudent.className = "px-4 py-2 rounded-xl text-sm font-semibold transition bg-amber-500 text-gray-950 shadow-lg shadow-amber-500/20 flex items-center gap-2";
+        if (tabTeacher) tabTeacher.className = "px-4 py-2 rounded-xl text-sm font-semibold transition bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2";
+        desc.innerText = "학생 소원 적기";
       }
     }
 
-    // 소원 전송 (Firebase Cloud Firestore로 전송)
+    // 소원 전송
     async function handleSendWish(e) {
       e.preventDefault();
       const author = document.getElementById('student-name').value.trim();
@@ -357,7 +357,7 @@
       if (!author || !text) return;
 
       btn.disabled = true;
-      btn.innerHTML = `전송 중...`;
+      btn.innerHTML = `소원 등불 올리는 중...`;
 
       try {
         if (window.addDoc && window.wishesCol) {
@@ -372,9 +372,11 @@
         }
 
         confetti({ particleCount: 50, spread: 60, origin: { y: 0.85 } });
-        alert('🏮 소원이 Firebase를 통해 밤하늘로 떠올랐습니다!');
-        document.getElementById('wish-text').value = '';
-        switchMode('teacher');
+        
+        // 전송 완료 후 화면 전환
+        document.getElementById('wish-form').classList.add('hidden');
+        document.getElementById('submit-success').classList.remove('hidden');
+
       } catch (err) {
         console.error("Firebase 전송 오류:", err);
         alert('전송 중 오류가 발생했습니다. Firestore 보안 규칙을 확인해 주세요.');
@@ -385,7 +387,13 @@
       }
     }
 
-    // 화면에 연등 요소 생성
+    function resetStudentForm() {
+      document.getElementById('wish-text').value = '';
+      document.getElementById('wish-form').classList.remove('hidden');
+      document.getElementById('submit-success').classList.add('hidden');
+    }
+
+    // 연등 렌더링
     window.addLanternToSky = function(data) {
       const sky = document.getElementById('sky-canvas');
       const lanternEl = document.createElement('div');
@@ -393,7 +401,7 @@
       lanternEl.className = 'floating-lantern flex flex-col items-center select-none';
 
       const left = Math.random() * 84 + 6;
-      const duration = Math.random() * 10 + 20; // 20s ~ 30s
+      const duration = Math.random() * 10 + 20;
       lanternEl.style.left = `${left}%`;
       lanternEl.style.animationDuration = `${duration}s`;
 
@@ -424,7 +432,6 @@
       document.getElementById('empty-notice').style.display = count > 0 ? 'none' : 'flex';
     };
 
-    // 모달창
     function openModal(data) {
       document.getElementById('modal-category').innerText = data.category;
       document.getElementById('modal-author').innerText = `${data.author} 님의 소원`;
@@ -437,7 +444,6 @@
       document.getElementById('modal').classList.remove('flex');
     }
 
-    // 연등 전체 비우기 (Firestore DB 일괄 삭제)
     async function clearAllLanterns() {
       if (!confirm('밤하늘과 데이터베이스의 모든 연등을 비우시겠습니까?')) return;
       try {
@@ -446,13 +452,9 @@
         await Promise.all(deletes);
       } catch (err) {
         console.error("비우기 실패:", err);
-        const sky = document.getElementById('sky-canvas');
-        sky.querySelectorAll('.floating-lantern').forEach(el => el.remove());
-        window.updateCounter();
       }
     }
 
-    // 전체화면
     function toggleFullscreen() {
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen();
@@ -460,6 +462,20 @@
         document.exitFullscreen();
       }
     }
+
+    // 접속 주소의 '?role=student' 감지
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('role') === 'student') {
+        isStudentModeOnly = true;
+        // 상단 교사용 전환 버튼 숨기기
+        const modeTabs = document.getElementById('mode-tabs');
+        if (modeTabs) modeTabs.classList.add('hidden');
+        switchMode('student');
+      } else {
+        switchMode('teacher');
+      }
+    });
 
     lucide.createIcons();
   </script>
