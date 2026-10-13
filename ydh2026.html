@@ -158,4 +158,63 @@
     window.addLanternToSky = function(data) {
       const sky = document.getElementById('sky-canvas');
       const el = document.createElement('div');
-      el.id =
+      el.id = `lantern-${data.id}`;
+      el.className = 'floating-lantern';
+      
+      // 좌우 여백 확보 (소원지가 넓어졌으므로 12% ~ 88% 사이 배치)
+      const left = Math.random() * 70 + 15;
+      const duration = Math.random() * 10 + 30; // 30초~40초 동안 천천히 상승
+      el.style.left = `${left}%`;
+      el.style.animationDuration = `${duration}s`;
+
+      el.innerHTML = `
+        <div class="flex flex-col items-center w-full">
+          <!-- 연등 본체 -->
+          <svg width="115" height="130" viewBox="0 0 100 120" style="filter: drop-shadow(0 0 26px ${data.glow});" class="shrink-0">
+            <ellipse cx="50" cy="18" rx="25" ry="9" fill="#d97706" />
+            <path d="M 26 20 C 6 52, 6 78, 26 100 C 38 107, 62 107, 74 100 C 94 78, 94 52, 74 20 Z" fill="${data.color}" opacity="0.95" />
+            <ellipse cx="50" cy="98" rx="25" ry="8" fill="#b45309" />
+            <circle cx="50" cy="60" r="19" fill="#fffbeb" opacity="0.88" style="filter: blur(5px);" />
+            <line x1="50" y1="104" x2="50" y2="120" stroke="#f59e0b" stroke-width="3.5" />
+          </svg>
+
+          <!-- 소원지 (완전 중앙 정렬 + 약 30pt/40px 글씨 크기) -->
+          <div class="wish-tag mt-2 px-5 py-4 rounded-3xl text-center">
+            <!-- 작성자 & 분야 -->
+            <div class="text-[20px] font-sans text-amber-300 font-bold mb-2 flex items-center justify-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/40 text-[18px]">[${data.category}]</span>
+              <span class="text-gray-100">${data.author}</span>
+            </div>
+            <!-- 소원 내용: 약 30pt (38px) 적용 -->
+            <div class="text-[38px] text-amber-50 font-bold leading-[1.35] tracking-tight whitespace-pre-wrap break-keep px-1">
+              "${data.text}"
+            </div>
+          </div>
+        </div>
+      `;
+
+      sky.appendChild(el);
+      window.updateCounter();
+    };
+
+    window.updateCounter = function() {
+      const count = document.querySelectorAll('.floating-lantern').length;
+      document.getElementById('lantern-count').innerText = count;
+      document.getElementById('empty-notice').style.display = count > 0 ? 'none' : 'flex';
+    };
+
+    async function clearAllLanterns() {
+      if (!confirm('모든 연등을 비우시겠습니까?')) return;
+      const snap = await window.getDocs(window.wishesCol);
+      await Promise.all(snap.docs.map(d => window.deleteDoc(window.doc(window.db, "wishes", d.id))));
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>
