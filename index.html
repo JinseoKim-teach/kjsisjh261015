@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -20,10 +21,15 @@
       appId: "1:899082747836:web:e4cd38e7877967c83cf5b9",
       measurementId: "G-95D44QD7KK"
     };
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    window.wishesCol = collection(db, "wishes");
-    window.addDoc = addDoc;
+    const wishesCol = collection(db, "wishes");
+
+    // 전송 함수를 모듈 내부에서 직접 바인딩
+    window.sendWishToFirebase = async function(data) {
+      return await addDoc(wishesCol, data);
+    };
   </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Pretendard:wght@400;600;800&display=swap');
@@ -153,11 +159,16 @@
 
       if (!author || !text) return;
 
+      if (!window.sendWishToFirebase) {
+        alert('서버 연결 준비 중입니다. 1~2초 후 다시 눌러주세요.');
+        return;
+      }
+
       btn.disabled = true;
       btn.innerHTML = '등불 올리는 중...';
 
       try {
-        await window.addDoc(window.wishesCol, {
+        await window.sendWishToFirebase({
           author,
           category,
           text,
@@ -170,7 +181,8 @@
         document.getElementById('wish-form').classList.add('hidden');
         document.getElementById('submit-success').classList.remove('hidden');
       } catch (err) {
-        alert('전송 중 오류가 발생했습니다.');
+        console.error("전송 에러 세부:", err);
+        alert(`전송 실패: ${err.message}\n(Firebase 규칙 권한 설정을 확인해주세요)`);
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i data-lucide="send" class="w-5 h-5"></i> 소원 연등 밤하늘로 띄우기`;
