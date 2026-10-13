@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>연등회 밤하늘 (교사용)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- 한글 명조/전통 웹폰트 (마루 부리 & 본명조) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-10-21@1.0/MaruBuri.woff" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&display=swap" />
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBMeRoGyq8L36-KwbsvkusBJjQ1MPkuQfs",
+      authDomain: "kjsisjh260515.firebaseapp.com",
+      projectId: "kjsisjh260515",
+      storageBucket: "kjsisjh260515.firebasestorage.app",
+      messagingSenderId: "899082747836",
+      appId: "1:899082747836:web:e4cd38e7877967c83cf5b9",
+      measurementId: "G-95D44QD7KK"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const wishesCol = collection(db, "wishes");
+
+    window.db = db;
+    window.wishesCol = wishesCol;
+    window.deleteDoc = deleteDoc;
+    window.doc = doc;
+    window.getDocs = getDocs;
+
+    const q = query(wishesCol, orderBy("createdAt", "asc"));
+    const renderedIds = new Set();
+
+    onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const data = { id: change.doc.id, ...change.doc.data() };
+          if (!renderedIds.has(data.id)) {
+            renderedIds.add(data.id);
+            window.addLanternToSky(data);
+          }
+        } else if (change.type === "removed") {
+          renderedIds.delete(change.doc.id);
+          const el = document.getElementById(`lantern-${change.doc.id}`);
+          if (el) el.remove();
+          window.updateCounter();
+        }
+      });
+    });
+  </script>
+
+  <style>
+    @font-face {
+      font-family: 'MaruBuri';
+      src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-10-21@1.0/MaruBuri-Bold.woff') format('woff');
+      font-weight: 700;
+    }
+    body {
+      font-family: 'MaruBuri', 'Noto Serif KR', serif;
+      background: radial-gradient(ellipse at bottom, #0f172a 0%, #030712 100%);
+      min-height: 100vh;
+      color: #f3f4f6;
+      overflow: hidden;
+    }
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 3s infinite ease-in-out;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 0.9; transform: scale(1.2); }
+    }
+    @keyframes floatUp {
+      0% {
+        transform: translateY(105vh) scale(0.85);
+        opacity: 0;
+      }
+      10% { opacity: 0.98; }
+      85% { opacity: 0.98; }
+      100% {
+        transform: translateY(-25vh) scale(1.05);
+        opacity: 0;
+      }
+    }
+    .floating-lantern {
+      position: absolute;
+      animation: floatUp 32s linear infinite;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    /* 마우스를 올리면 그 자리에 멈추고 크게 강조 */
+    .floating-lantern:hover {
+      animation-play-state: paused !important;
+      transform: scale(1.3) !important;
+      z-index: 100 !important;
+    }
+    /* 연등에 달린 소원지(소원 카드) 디자인 */
+    .wish-tag {
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+    }
+  </style>
+</head>
+<body class="relative w-screen h-screen select-none">
+
+  <!-- 별빛 배경 -->
+  <div id="stars-container" class="fixed inset-0 pointer-events-none z-0"></div>
+
+  <!-- 상단 제어 바 -->
+  <div class="absolute top-4 left-4 z-30 flex items-center gap-3 bg-gray-900/85 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-gray-700/60 text-xs">
+    <div class="flex items-center gap-2">
+      <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span class="text-gray-300">날아오른 연등: <b id="lantern-count" class="text-amber-400 font-mono text-sm">0</b>개</span>
+    </div>
+    <div class="h-4 w-px bg-gray-700"></div>
+    <button onclick="clearAllLanterns()" class="text-gray-400 hover:text-red-400 transition flex items-center gap-1">
+      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 비우기
+    </button>
+    <button onclick="toggleFullscreen()" class="text-gray-400 hover:text-amber-300 transition flex items-center gap-1">
+      <i data-lucide="maximize" class="w-3.5 h-3.5"></i> 전체화면
+    </button>
+  </div>
+
+  <!-- 하늘 캔버스 -->
+  <div id="sky-canvas" class="relative w-full h-full overflow-hidden">
+    <div id="empty-notice" class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+      <div class="text-6xl mb-4 animate-bounce">🏮</div>
+      <p class="text-2xl sm:text-3xl text-amber-200 font-bold tracking-wide">학생들의 소원을 기다리고 있습니다</p>
+      <p class="text-sm text-gray-400 mt-2 font-sans">학생이 소원을 띄우면 연등과 소원지가 함께 떠오릅니다.</p>
+    </div>
+  </div>
+
+  <!-- 큰 모달 (필요시 클릭하면 초대형으로 확인 가능) -->
+  <div id="modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-gray-900 border border-amber-500/50 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl relative">
+      <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-100">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+      <div class="text-4xl mb-3">🏮</div>
+      <span id="modal-category" class="inline-block px-3.5 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 mb-2 font-sans"></span>
+      <h3 id="modal-author" class="font-bold text-xl text-gray-100 mb-4"></h3>
+      <div class="p-5 bg-gray-800/80 rounded-2xl border border-gray-700/70 text-amber-100 text-lg leading-relaxed whitespace-pre-wrap text-left font-serif">
+        <span id="modal-wish"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 별 생성
+    const stars = document.getElementById('stars-container');
+    for (let i = 0; i < 75; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      s.style.width = `${Math.random() * 2.5 + 1}px`;
+      s.style.height = s.style.width;
+      s.style.left = `${Math.random() * 100}%`;
+      s.style.top = `${Math.random() * 100}%`;
+      s.style.animationDelay = `${Math.random() * 3}s`;
+      stars.appendChild(s);
+    }
+
+    // 연등 생성 (소원 카드가 아래에 바로 매달려 나옴)
+    window.addLanternToSky = function(data) {
+      const sky = document.getElementById('sky-canvas');
+      const el = document.createElement('div');
+      el.id = `lantern-${data.id}`;
+      el.className = 'floating-lantern flex flex-col items-center';
+      
+      const left = Math.random() * 80 + 7;
+      const duration = Math.random() * 10 + 26; // 26초~36초 동안 천천히 상승
+      el.style.left = `${left}%`;
+      el.style.animationDuration = `${duration}s`;
+
+      el.innerHTML = `
+        <div class="flex flex-col items-center">
+          <!-- 연등 본체 -->
+          <svg width="68" height="78" viewBox="0 0 100 120" style="filter: drop-shadow(0 0 18px ${data.glow});">
+            <ellipse cx="50" cy="18" rx="22" ry="8" fill="#d97706" />
+            <path d="M 28 20 C 10 50, 10 75, 28 100 C 40 106, 60 106, 72 100 C 90 75, 90 50, 72 20 Z" fill="${data.color}" opacity="0.95" />
+            <ellipse cx="50" cy="98" rx="22" ry="7" fill="#b45309" />
+            <circle cx="50" cy="60" r="16" fill="#fffbeb" opacity="0.85" style="filter: blur(4px);" />
+            <line x1="50" y1="104" x2="50" y2="114" stroke="#f59e0b" stroke-width="2.5" />
+          </svg>
+
+          <!-- 연등 아래 매달린 소원지 (소원 내용이 즉시 보임) -->
+          <div class="wish-tag mt-0.5 px-3 py-2 rounded-xl text-center max-w-[210px] w-max">
+            <div class="text-[11px] font-sans text-amber-300 font-semibold mb-0.5 flex items-center justify-center gap-1">
+              <span>[${data.category}]</span>
+              <span class="text-gray-200">${data.author}</span>
+            </div>
+            <div class="text-[12px] text-amber-50 font-medium leading-snug line-clamp-2 px-1">
+              "${data.text}"
+            </div>
+          </div>
+        </div>
+      `;
+
+      // 클릭 시 모달 열기
+      el.onclick = () => openModal(data);
+      sky.appendChild(el);
+      window.updateCounter();
+    };
+
+    window.updateCounter = function() {
+      const count = document.querySelectorAll('.floating-lantern').length;
+      document.getElementById('lantern-count').innerText = count;
+      document.getElementById('empty-notice').style.display = count > 0 ? 'none' : 'flex';
+    };
+
+    function openModal(data) {
+      document.getElementById('modal-category').innerText = `소원 분야: ${data.category}`;
+      document.getElementById('modal-author').innerText = `${data.author} 학생의 소원`;
+      document.getElementById('modal-wish').innerText = data.text;
+      document.getElementById('modal').classList.remove('hidden');
+      document.getElementById('modal').classList.add('flex');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+      document.getElementById('modal').classList.remove('flex');
+    }
+
+    async function clearAllLanterns() {
+      if (!confirm('모든 연등을 비우시겠습니까?')) return;
+      const snap = await window.getDocs(window.wishesCol);
+      await Promise.all(snap.docs.map(d => window.deleteDoc(window.doc(window.db, "wishes", d.id))));
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>
