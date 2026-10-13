@@ -48,3 +48,166 @@
           }
         } else if (change.type === "removed") {
           renderedIds.delete(change.doc.id);
+          const el = document.getElementById(`lantern-${change.doc.id}`);
+          if (el) el.remove();
+          window.updateCounter();
+        }
+      });
+    });
+  </script>
+
+  <style>
+    @font-face {
+      font-family: 'MaruBuri';
+      src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-10-21@1.0/MaruBuri-Bold.woff') format('woff');
+      font-weight: 700;
+    }
+    body {
+      font-family: 'MaruBuri', 'Noto Serif KR', serif;
+      background: radial-gradient(ellipse at bottom, #0f172a 0%, #030712 100%);
+      min-height: 100vh;
+      color: #f3f4f6;
+      overflow: hidden;
+      user-select: none;
+    }
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 3s infinite ease-in-out;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 0.9; transform: scale(1.2); }
+    }
+    @keyframes floatUp {
+      0% {
+        transform: translateY(110vh) scale(0.9);
+        opacity: 0;
+      }
+      8% { opacity: 0.98; }
+      88% { opacity: 0.98; }
+      100% {
+        transform: translateY(-30vh) scale(1.1);
+        opacity: 0;
+      }
+    }
+    /* 연등 이동 애니메이션: 호버 효과를 주지 않고 부드럽게만 상승 */
+    .floating-lantern {
+      position: absolute;
+      animation: floatUp 34s linear infinite;
+      pointer-events: none; /* 마우스 반응 없이 배경처럼 유영 */
+    }
+    /* 큼직해진 소원지(태그) 디자인 */
+    .wish-tag {
+      background: rgba(15, 23, 42, 0.92);
+      border: 1.5px solid rgba(251, 191, 36, 0.55);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+    }
+  </style>
+</head>
+<body class="relative w-screen h-screen">
+
+  <!-- 별빛 배경 -->
+  <div id="stars-container" class="fixed inset-0 pointer-events-none z-0"></div>
+
+  <!-- 상단 제어 바 -->
+  <div class="absolute top-4 left-4 z-30 flex items-center gap-3 bg-gray-900/85 backdrop-blur-md px-5 py-3 rounded-2xl border border-gray-700/60 text-sm">
+    <div class="flex items-center gap-2">
+      <span class="inline-block w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span class="text-gray-300">날아오른 연등: <b id="lantern-count" class="text-amber-400 font-mono text-base">0</b>개</span>
+    </div>
+    <div class="h-4 w-px bg-gray-700"></div>
+    <button onclick="clearAllLanterns()" class="text-gray-400 hover:text-red-400 transition flex items-center gap-1.5 cursor-pointer">
+      <i data-lucide="trash-2" class="w-4 h-4"></i> 비우기
+    </button>
+    <button onclick="toggleFullscreen()" class="text-gray-400 hover:text-amber-300 transition flex items-center gap-1.5 cursor-pointer">
+      <i data-lucide="maximize" class="w-4 h-4"></i> 전체화면
+    </button>
+  </div>
+
+  <!-- 하늘 캔버스 -->
+  <div id="sky-canvas" class="relative w-full h-full overflow-hidden">
+    <div id="empty-notice" class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+      <div class="text-7xl mb-4 animate-bounce">🏮</div>
+      <p class="text-3xl sm:text-4xl text-amber-200 font-bold tracking-wide">학생들의 소원을 기다리고 있습니다</p>
+      <p class="text-base text-gray-400 mt-3 font-sans">학생이 소원을 띄우면 큼직한 연등과 소원지가 함께 피어오릅니다.</p>
+    </div>
+  </div>
+
+  <script>
+    // 별 생성
+    const stars = document.getElementById('stars-container');
+    for (let i = 0; i < 75; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      s.style.width = `${Math.random() * 2.5 + 1}px`;
+      s.style.height = s.style.width;
+      s.style.left = `${Math.random() * 100}%`;
+      s.style.top = `${Math.random() * 100}%`;
+      s.style.animationDelay = `${Math.random() * 3}s`;
+      stars.appendChild(s);
+    }
+
+    // 연등 생성 (크기 확대 & 정지 효과 없음)
+    window.addLanternToSky = function(data) {
+      const sky = document.getElementById('sky-canvas');
+      const el = document.createElement('div');
+      el.id = `lantern-${data.id}`;
+      el.className = 'floating-lantern flex flex-col items-center';
+      
+      const left = Math.random() * 76 + 8; // 좌우 여백 확보
+      const duration = Math.random() * 10 + 28; // 28초~38초 동안 부드럽게 상승
+      el.style.left = `${left}%`;
+      el.style.animationDuration = `${duration}s`;
+
+      el.innerHTML = `
+        <div class="flex flex-col items-center">
+          <!-- 연등 본체 (크기 확대: 95x110) -->
+          <svg width="95" height="110" viewBox="0 0 100 120" style="filter: drop-shadow(0 0 24px ${data.glow});">
+            <ellipse cx="50" cy="18" rx="24" ry="9" fill="#d97706" />
+            <path d="M 26 20 C 6 52, 6 78, 26 100 C 38 107, 62 107, 74 100 C 94 78, 94 52, 74 20 Z" fill="${data.color}" opacity="0.95" />
+            <ellipse cx="50" cy="98" rx="24" ry="8" fill="#b45309" />
+            <circle cx="50" cy="60" r="18" fill="#fffbeb" opacity="0.88" style="filter: blur(5px);" />
+            <line x1="50" y1="104" x2="50" y2="118" stroke="#f59e0b" stroke-width="3" />
+          </svg>
+
+          <!-- 큼직해진 소원지 (너비 280px, 글자 크기 확대) -->
+          <div class="wish-tag mt-1 px-4 py-3 rounded-2xl text-center max-w-[280px] w-max">
+            <div class="text-sm font-sans text-amber-300 font-bold mb-1 flex items-center justify-center gap-1.5">
+              <span>[${data.category}]</span>
+              <span class="text-gray-100">${data.author}</span>
+            </div>
+            <div class="text-base text-amber-50 font-bold leading-relaxed whitespace-pre-wrap break-keep px-1">
+              "${data.text}"
+            </div>
+          </div>
+        </div>
+      `;
+
+      sky.appendChild(el);
+      window.updateCounter();
+    };
+
+    window.updateCounter = function() {
+      const count = document.querySelectorAll('.floating-lantern').length;
+      document.getElementById('lantern-count').innerText = count;
+      document.getElementById('empty-notice').style.display = count > 0 ? 'none' : 'flex';
+    };
+
+    async function clearAllLanterns() {
+      if (!confirm('모든 연등을 비우시겠습니까?')) return;
+      const snap = await window.getDocs(window.wishesCol);
+      await Promise.all(snap.docs.map(d => window.deleteDoc(window.doc(window.db, "wishes", d.id))));
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>
