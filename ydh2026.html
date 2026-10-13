@@ -84,3 +84,162 @@
       0% {
         transform: translate(-50%, 112vh) scale(0.95);
         opacity: 0;
+      }
+      8% { opacity: 0.98; }
+      88% { opacity: 0.98; }
+      100% {
+        transform: translate(-50%, -40vh) scale(1.05);
+        opacity: 0;
+      }
+    }
+    .floating-lantern {
+      position: absolute;
+      animation: floatUp 34s linear infinite;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: fit-content;
+    }
+    /* 고운 한지 표찰 스타일 (시각적 균형 최적화) */
+    .hanji-tag {
+      background: linear-gradient(180deg, #fdfaf3 0%, #f4ead5 100%);
+      color: #1a1612;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.75), 0 0 20px rgba(251, 191, 36, 0.25);
+      border-top: 4px solid #b45309;
+      position: relative;
+    }
+    /* 표찰 하단 삼각 깃발 */
+    .hanji-tag::after {
+      content: '';
+      position: absolute;
+      bottom: -9px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 9px 12px 0 12px;
+      border-style: solid;
+      border-color: #f4ead5 transparent transparent transparent;
+    }
+  </style>
+</head>
+<body class="relative w-screen h-screen">
+
+  <div id="stars-container" class="fixed inset-0 pointer-events-none z-0"></div>
+
+  <!-- 상단 제어 바 -->
+  <div class="absolute top-4 left-4 z-30 flex items-center gap-3 bg-gray-900/85 backdrop-blur-md px-5 py-3 rounded-2xl border border-gray-700/60 text-sm">
+    <div class="flex items-center gap-2">
+      <span class="inline-block w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span class="text-gray-300 font-sans">날아오른 소원등: <b id="lantern-count" class="text-amber-400 font-mono text-base">0</b>개</span>
+    </div>
+    <div class="h-4 w-px bg-gray-700"></div>
+    <button onclick="clearAllLanterns()" class="text-gray-400 hover:text-red-400 transition flex items-center gap-1.5 cursor-pointer font-sans">
+      <i data-lucide="trash-2" class="w-4 h-4"></i> 비우기
+    </button>
+    <button onclick="toggleFullscreen()" class="text-gray-400 hover:text-amber-300 transition flex items-center gap-1.5 cursor-pointer font-sans">
+      <i data-lucide="maximize" class="w-4 h-4"></i> 전체화면
+    </button>
+  </div>
+
+  <div id="sky-canvas" class="relative w-full h-full overflow-hidden">
+    <div id="empty-notice" class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+      <div class="text-7xl mb-4 animate-bounce">🏮</div>
+      <p class="text-3xl text-amber-200 font-bold tracking-wide">학생들의 소원을 기다리고 있습니다</p>
+      <p class="text-base text-gray-400 mt-3 font-sans">학생이 소원을 띄우면 연등과 고운 소원지가 함께 떠오릅니다.</p>
+    </div>
+  </div>
+
+  <script>
+    const stars = document.getElementById('stars-container');
+    for (let i = 0; i < 75; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      s.style.width = `${Math.random() * 2.5 + 1}px`;
+      s.style.height = s.style.width;
+      s.style.left = `${Math.random() * 100}%`;
+      s.style.top = `${Math.random() * 100}%`;
+      s.style.animationDelay = `${Math.random() * 3}s`;
+      stars.appendChild(s);
+    }
+
+    window.addLanternToSky = function(data) {
+      const sky = document.getElementById('sky-canvas');
+      const el = document.createElement('div');
+      el.id = `lantern-${data.id}`;
+      el.className = 'floating-lantern';
+      
+      const left = Math.random() * 70 + 15;
+      const duration = Math.random() * 10 + 30;
+      el.style.left = `${left}%`;
+      el.style.animationDuration = `${duration}s`;
+
+      // 앞뒤 불필요한 따옴표가 있으면 깔끔하게 제거
+      const cleanText = (data.text || '').replace(/^["']+|["']+$/g, '').trim();
+
+      el.innerHTML = `
+        <div class="flex flex-col items-center">
+          <!-- 1. 연등 본체 -->
+          <svg width="120" height="140" viewBox="0 0 100 120" style="filter: drop-shadow(0 0 26px ${data.glow});" class="shrink-0">
+            <ellipse cx="50" cy="18" rx="26" ry="9" fill="#d97706" />
+            <path d="M 24 20 C 4 52, 4 80, 24 102 C 38 109, 62 109, 76 102 C 96 80, 96 52, 76 20 Z" fill="${data.color}" opacity="0.95" />
+            <ellipse cx="50" cy="100" rx="26" ry="8" fill="#b45309" />
+            <circle cx="50" cy="60" r="21" fill="#fffbeb" opacity="0.9" style="filter: blur(6px);" />
+            <line x1="50" y1="106" x2="50" y2="122" stroke="#d97706" stroke-width="4" />
+          </svg>
+
+          <!-- 2. 단정하고 균형 잡힌 한지 소원지 -->
+          <div class="hanji-tag px-6 py-4 rounded-b-xl flex flex-col items-center justify-center text-center min-w-[280px] max-w-[420px] -mt-1">
+            <!-- 상단: 소원 분야 및 이름 -->
+            <div class="flex items-center justify-center gap-2 mb-2 pb-1.5 border-b border-amber-900/15 w-full">
+              <span class="text-[13px] font-sans font-bold px-2 py-0.5 rounded bg-amber-900/10 text-amber-900">[${data.category}]</span>
+              <span class="text-[16px] font-bold text-gray-800 tracking-tight">${data.author}</span>
+            </div>
+            
+            <!-- 소원 본문: 따옴표 없이 정중앙에 시원하게 배치 -->
+            <div class="w-full text-center flex items-center justify-center py-1">
+              <p class="text-[26px] font-extrabold text-gray-950 leading-snug tracking-tight break-keep text-center m-0">
+                ${cleanText}
+              </p>
+            </div>
+
+            <!-- 하단 도장 -->
+            <div class="mt-2.5 flex items-center justify-center">
+              <span class="inline-block px-1.5 py-0.5 rounded border border-rose-700 text-[10px] text-rose-700 font-bold bg-rose-50/60 font-sans">
+                소원성취
+              </span>
+            </div>
+          </div>
+
+          <!-- 3. 하단 장식 술 -->
+          <div class="flex flex-col items-center mt-2.5">
+            <div class="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+            <div class="w-0.5 h-5 bg-gradient-to-b from-amber-500 to-amber-700"></div>
+          </div>
+        </div>
+      `;
+
+      sky.appendChild(el);
+      window.updateCounter();
+    };
+
+    window.updateCounter = function() {
+      const count = document.querySelectorAll('.floating-lantern').length;
+      document.getElementById('lantern-count').innerText = count;
+      document.getElementById('empty-notice').style.display = count > 0 ? 'none' : 'flex';
+    };
+
+    async function clearAllLanterns() {
+      if (!confirm('모든 연등을 비우시겠습니까?')) return;
+      const snap = await window.getDocs(window.wishesCol);
+      await Promise.all(snap.docs.map(d => window.deleteDoc(window.doc(window.db, "wishes", d.id))));
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>
